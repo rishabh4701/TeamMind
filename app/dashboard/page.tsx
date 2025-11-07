@@ -52,8 +52,8 @@ export default async function DashboardPage({
       </form>
 
       <div className="grid md:grid-cols-2 gap-4">
-        {cards.map((c) => (
-          <CardItem key={c.id} card={c as any} />
+        {cards.map((c: any) => (
+          <CardItem key={c.id} card={c} />
         ))}
       </div>
     </div>
