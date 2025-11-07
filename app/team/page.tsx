@@ -1,12 +1,12 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-const TEAMS = ["A-Team","B-Team","C-Team"] as const;
+const TEAMS = ["A-Team", "B-Team", "C-Team"] as const;
 
 async function getTeamSections(viewerTeamId: string) {
   // counts for each team, respecting display rules: own team all, others public
   const sections = await Promise.all(TEAMS.map(async (teamId) => {
-    const where:any = (teamId === viewerTeamId)
+    const where: any = (teamId === viewerTeamId)
       ? { teamId } // include both PUBLIC and PRIVATE
       : { teamId, access: "PUBLIC" as const };
 
@@ -24,7 +24,7 @@ async function getTeamSections(viewerTeamId: string) {
   return sections;
 }
 
-export default async function TeamPage({ searchParams }:{ searchParams: { teamFilter?: string }}) {
+export default async function TeamPage({ searchParams }: { searchParams: { teamFilter?: string } }) {
   const session = await auth();
   if (!session?.user) return null;
 
@@ -40,17 +40,20 @@ export default async function TeamPage({ searchParams }:{ searchParams: { teamFi
               <h2 className="text-lg font-semibold">{teamId} <span className="text-sm text-gray-600">({totalCount} Cards)</span></h2>
             </div>
             <div className="space-y-3">
-              {visibleCards.map(c => (
+              {visibleCards.map((c: any) => (
                 <div key={c.id} className="border rounded-xl p-3">
                   {/* mini card: lock on private */}
                   <div className="flex items-center gap-2">
                     <div className="font-medium">{c.title}</div>
-                    {c.access === "PRIVATE" && <span className="text-xs px-2 py-0.5 border rounded-full">🔒 PRIVATE</span>}
+                    {c.access === "PRIVATE" && (
+                      <span className="text-xs px-2 py-0.5 border rounded-full">🔒 PRIVATE</span>
+                    )}
                     <div className="ml-auto text-xs">👍 {c.likesCount}</div>
                   </div>
                   <div className="text-sm text-gray-700">{c.summary ?? ""}</div>
                 </div>
               ))}
+
               {visibleCards.length === 0 && <div className="text-sm text-gray-500">No cards yet.</div>}
             </div>
           </section>
