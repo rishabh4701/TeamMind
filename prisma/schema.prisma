@@ -1,0 +1,72 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Access {
+  PUBLIC
+  PRIVATE
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  teamId    String   // "A-Team" | "B-Team" | "C-Team"
+  createdAt DateTime @default(now())
+
+  cards     KnowledgeCard[]
+  comments  Comment[]
+  likes     Like[]
+}
+
+model KnowledgeCard {
+  id          String    @id @default(cuid())
+  title       String
+  content     String
+  summary     String?   // AI-generated
+  tags        String[]  // AI-generated
+  relatedCardIds String[] // store related card ids (AI-generated)
+  createdById String
+  createdBy   User      @relation(fields: [createdById], references: [id])
+  teamId      String
+  access      Access    @default(PUBLIC)
+  likesCount  Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  comments    Comment[]
+  likes       Like[]
+}
+
+model Comment {
+  id          String   @id @default(cuid())
+  text        String
+  cardId      String
+  card        KnowledgeCard @relation(fields: [cardId], references: [id])
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model Like {
+  id          String   @id @default(cuid())
+  cardId      String
+  userId      String
+  card        KnowledgeCard @relation(fields: [cardId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@unique([cardId, userId]) // prevent double-like
+}
+
