@@ -12,12 +12,15 @@ export async function enrichCardWithAI(input: { title: string; content: string }
     take: 20,
   });
 
-  const sys = `You enrich knowledge cards.
-Return JSON with: summary (2-3 sentences), tags (3-6 short tags), relatedCardIds (up to 3 ids from list).\n` +
+  // ✅ Explicitly type 'r' to fix build error
+  const sys =
+    `You enrich knowledge cards.\n` +
+    `Return JSON with: summary (2-3 sentences), tags (3-6 short tags), relatedCardIds (up to 3 ids from list).\n` +
     `Available candidates:\n` +
-    recent.map(r => `- ${r.id}: ${r.title}`).join("\n");
+    recent.map((r: { id: string; title: string }) => `- ${r.id}: ${r.title}`).join("\n");
 
-  const user = `Title: ${input.title}\nContent:\n${input.content}\n` +
+  const user =
+    `Title: ${input.title}\nContent:\n${input.content}\n` +
     `Pick up to three related by ID from the candidate list above (if none fit, return empty array).`;
 
   const resp = await client.chat.completions.create({
@@ -35,9 +38,15 @@ Return JSON with: summary (2-3 sentences), tags (3-6 short tags), relatedCardIds
     return {
       summary: parsed.summary ?? "",
       tags: Array.isArray(parsed.tags) ? parsed.tags : [],
-      relatedCardIds: Array.isArray(parsed.relatedCardIds) ? parsed.relatedCardIds : [],
+      relatedCardIds: Array.isArray(parsed.relatedCardIds)
+        ? parsed.relatedCardIds
+        : [],
     };
   } catch {
-    return { summary: "AI enrichment unavailable.", tags: [], relatedCardIds: [] };
+    return {
+      summary: "AI enrichment unavailable.",
+      tags: [],
+      relatedCardIds: [],
+    };
   }
 }
