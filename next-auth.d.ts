@@ -21,3 +21,5 @@ declare module "next-auth" {
     teamId: string;
   }
 }
+
+export { NextAuth, DefaultSession };

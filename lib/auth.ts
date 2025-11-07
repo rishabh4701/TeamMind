@@ -1,10 +1,12 @@
 import NextAuth from "next-auth";
+import { type DefaultSession, type DefaultJWT } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcrypt";
 import { prisma } from "./prisma";
 
+// Extend NextAuth types
 declare module "next-auth" {
-  interface Session {
+  interface Session extends DefaultSession {
     user: {
       id: string;
       email: string;
@@ -12,13 +14,17 @@ declare module "next-auth" {
       teamId: string;
     };
   }
-  interface JWT {
+}
+
+declare module "next-auth/jwt" {
+  interface JWT extends DefaultJWT {
     id: string;
     teamId: string;
   }
 }
 
-export const { auth, handlers, signIn, signOut } = NextAuth({
+// ✅ Proper v5-compatible config
+export const authOptions = {
   providers: [
     Credentials({
       name: "Credentials",
@@ -26,10 +32,10 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials: Record<string, string> | undefined) {
         try {
-          const email = credentials?.email as string;
-          const password = credentials?.password as string;
+          const email = credentials?.email;
+          const password = credentials?.password;
           if (!email || !password) return null;
 
           const user = await prisma.user.findUnique({ where: { email } });
@@ -51,26 +57,41 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       },
     }),
   ],
-
   session: { strategy: "jwt" },
-
-  // ✅ Add this section — crucial for session persistence
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({
+      token,
+      user,
+    }: {
+      token: any;
+      user?: { id: string; teamId: string };
+    }) {
       if (user) {
         token.id = user.id;
         token.teamId = user.teamId;
       }
       return token;
     },
-    async session({ session, token }) {
+
+    async session({
+      session,
+      token,
+    }: {
+      session: any;
+      token: { id: string; teamId: string };
+    }) {
       if (session.user) {
-        session.user.id = token.id as string;
-        session.user.teamId = token.teamId as string;
+        session.user.id = token.id;
+        session.user.teamId = token.teamId;
       }
       return session;
     },
   },
-
   secret: process.env.NEXTAUTH_SECRET,
-});
+};
+
+// ✅ Create NextAuth instance
+const { handlers, auth, signIn, signOut } = NextAuth(authOptions);
+export { handlers, auth, signIn, signOut };
+
+// src/auth.ts
