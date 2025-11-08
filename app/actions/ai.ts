@@ -1,48 +1,68 @@
 "use server";
-import OpenAI from "openai";
-import { prisma } from "@/lib/prisma";
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+import { prisma } from "@/lib/prisma";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export async function enrichCardWithAI(input: { title: string; content: string }) {
-  // Fetch a few recent cards to help with related suggestions
+  console.log("🧠 [AI] Starting enrichment for:", input.title);
+
+  // ✅ Check if API key is configured
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    console.error("❌ [AI] GEMINI_API_KEY is not set in environment variables");
+    return {
+      summary: "AI enrichment unavailable.",
+      tags: [],
+      relatedCardIds: [],
+    };
+  }
+
+  const client = new GoogleGenerativeAI(apiKey);
+
   const recent = await prisma.knowledgeCard.findMany({
     select: { id: true, title: true, content: true },
     orderBy: { createdAt: "desc" },
     take: 20,
   });
 
-  // ✅ Explicitly type 'r' to fix build error
-  const sys =
-    `You enrich knowledge cards.\n` +
-    `Return JSON with: summary (2-3 sentences), tags (3-6 short tags), relatedCardIds (up to 3 ids from list).\n` +
-    `Available candidates:\n` +
-    recent.map((r: { id: string; title: string }) => `- ${r.id}: ${r.title}`).join("\n");
+  const sysPrompt =
+    `You are an AI assistant that enriches knowledge cards.\n` +
+    `Return a valid JSON object ONLY with keys: summary, tags, relatedCardIds.\n` +
+    `summary: 2-3 sentences summarizing the content.\n` +
+    `tags: an array of 3–6 short tags.\n` +
+    `relatedCardIds: up to 3 related card IDs from the list.\n\n` +
+    `Available existing cards:\n` +
+    recent.map((r) => `- ${r.id}: ${r.title}`).join("\n");
 
-  const user =
-    `Title: ${input.title}\nContent:\n${input.content}\n` +
-    `Pick up to three related by ID from the candidate list above (if none fit, return empty array).`;
-
-  const resp = await client.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      { role: "system", content: sys },
-      { role: "user", content: user },
-    ],
-    response_format: { type: "json_object" },
-    temperature: 0.3,
-  });
+  const userPrompt = `${sysPrompt}\n\nTitle: ${input.title}\nContent:\n${input.content}\n`;
 
   try {
-    const parsed = JSON.parse(resp.choices[0].message.content || "{}");
+    const model = client.getGenerativeModel({ model: "gemini-pro" });
+    const result = await model.generateContent(userPrompt);
+    const text = result.response.text();
+    console.log("🧠 [AI] Gemini raw response:", text);
+
+    const jsonStart = text.indexOf("{");
+    const jsonEnd = text.lastIndexOf("}");
+    const jsonString = text.slice(jsonStart, jsonEnd + 1);
+
+    const parsed = JSON.parse(jsonString);
+    console.log("✅ [AI] Parsed enrichment:", parsed);
+
     return {
-      summary: parsed.summary ?? "",
+      summary: parsed.summary ?? "No summary generated.",
       tags: Array.isArray(parsed.tags) ? parsed.tags : [],
       relatedCardIds: Array.isArray(parsed.relatedCardIds)
         ? parsed.relatedCardIds
         : [],
     };
-  } catch {
+  } catch (err) {
+    console.error("❌ [AI] Gemini enrichment failed:", err);
+    // Log more details about the error
+    if (err instanceof Error) {
+      console.error("❌ [AI] Error message:", err.message);
+      console.error("❌ [AI] Error stack:", err.stack);
+    }
     return {
       summary: "AI enrichment unavailable.",
       tags: [],

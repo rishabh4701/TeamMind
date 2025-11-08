@@ -12,7 +12,7 @@ It enables authenticated team members to create, enrich, and explore “knowledg
 * **Node.js ≥ 18**
 * **PostgreSQL** running locally (or on cloud)
 * **pnpm** or **npm**
-* **OpenAI API Key** (for AI enrichment)
+* **Google Gemini API Key** (for AI enrichment)
 
 ---
 
@@ -36,7 +36,7 @@ Add the following to your `.env` file:
 DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/teammind?schema=public"
 NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="your_long_random_string"
-OPENAI_API_KEY="sk-..."   # from https://platform.openai.com/api-keys
+GEMINI_API_KEY="your_gemini_api_key"   # from https://aistudio.google.com/app/apikey
 ```
 
 ---
@@ -103,10 +103,10 @@ All main logic is implemented using **Next.js Server Actions** for direct server
 
 | Action               | File                  | Description                                                       |
 | -------------------- | --------------------- | ----------------------------------------------------------------- |
-| `upsertCard()`       | `app/actions/card.ts` | Create or update cards; includes OpenAI enrichment before saving. |
+| `upsertCard()`       | `app/actions/card.ts` | Create or update cards; includes AI enrichment before saving. |
 | `toggleLike()`       | `app/actions/card.ts` | Handles optimistic like/unlike using Prisma transactions.         |
 | `addComment()`       | `app/actions/card.ts` | Adds a comment to a card and triggers revalidation.               |
-| `enrichCardWithAI()` | `app/actions/ai.ts`   | Uses OpenAI API to generate summary, tags, and related cards.     |
+| `enrichCardWithAI()` | `app/actions/ai.ts`   | Uses Google Gemini API to generate summary, tags, and related cards.     |
 
 ### ✅ Optimistic UI
 
@@ -155,14 +155,14 @@ AI-based enrichment and access-controlled collaboration.
 
 ### 🧩 Challenges
 
-* Handling OpenAI responses reliably within Server Actions.
+* Handling Google Gemini API responses reliably within Server Actions.
 * Keeping data consistent when AI calls fail or time out.
 * Implementing optimistic UI updates while ensuring DB consistency.
 * Designing team-based filtering and privacy enforcement.
 
 ### 💡 Solutions
 
-* Implemented `enrichCardWithAI()` using **OpenAI (gpt-4o-mini)** for summarization and tag generation.
+* Implemented `enrichCardWithAI()` using **Google Gemini (gemini-pro)** for summarization and tag generation.
 * Added error handling and fallback values (e.g., *"AI enrichment unavailable"").
 * Unified access control logic in `lib/access.ts`.
 * Used React hooks `useOptimistic()` and `useTransition()` for seamless, real-time feedback.
@@ -194,7 +194,7 @@ pnpm start
 | **Styling**        | Tailwind CSS                                      |
 | **Authentication** | NextAuth.js (Credentials Provider)                |
 | **Database**       | PostgreSQL + Prisma ORM                           |
-| **AI Integration** | OpenAI API (gpt-4o-mini)                          |
+| **AI Integration** | Google Gemini API (gemini-pro)                          |
 | **Optimistic UI**  | React 18 hooks (`useOptimistic`, `useTransition`) |
 | **Deployment**     | Vercel                                            |
 
