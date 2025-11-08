@@ -2,6 +2,7 @@
 
 import { signIn } from "next-auth/react";
 import { useState } from "react";
+import Link from "next/link";
 
 export default function SignInPage() {
   const [email, setEmail] = useState("");
@@ -54,6 +55,16 @@ export default function SignInPage() {
         >
           Sign In
         </button>
+
+        <p className="text-center text-sm text-gray-600">
+          New user?{" "}
+          <Link
+            href="/sign-up"
+            className="text-blue-600 hover:underline font-medium"
+          >
+            Create an account
+          </Link>
+        </p>
       </form>
     </div>
   );

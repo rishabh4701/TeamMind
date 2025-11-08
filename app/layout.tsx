@@ -1,6 +1,7 @@
 import "./globals.css";
 import Link from "next/link";
 import { auth, signOut } from "@/lib/auth";
+export const dynamic = "force-dynamic";
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
